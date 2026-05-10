@@ -1,146 +1,138 @@
 // ============================================
 // PORTFOLIO JAVASCRIPT
-// Pure vanilla JS - no dependencies
 // ============================================
 
-// Smooth scroll behavior for navigation links
+// ---- Smooth scroll for in-page anchors ----
 document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-    anchor.addEventListener('click', function(e) {
+    anchor.addEventListener('click', function (e) {
         const href = this.getAttribute('href');
-        if (href !== '#top') {
-            e.preventDefault();
-            const target = document.querySelector(href);
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth' });
-            }
-        }
+        if (href === '#top') return;
+        const target = document.querySelector(href);
+        if (!target) return;
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 });
 
-// Add hover effect to service cards
-const serviceCards = document.querySelectorAll('.service-card');
-serviceCards.forEach(card => {
-    card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-4px)';
-        this.style.backgroundColor = 'white';
-    });
-    
-    card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0)';
-        this.style.backgroundColor = 'rgba(247, 245, 238, 0.9)';
-    });
-});
+// ---- Active nav link based on scroll position ----
+const navLinks = document.querySelectorAll('.nav-link');
+const sections = document.querySelectorAll('section[id]');
 
-// Add hover effect to project cards
-const projectCards = document.querySelectorAll('.project-card');
-projectCards.forEach(card => {
-    card.addEventListener('mouseenter', function() {
-        this.style.transform = 'translateY(-4px)';
-    });
-    
-    card.addEventListener('mouseleave', function() {
-        this.style.transform = 'translateY(0)';
-    });
-});
-
-// Active nav link highlighting based on scroll position
 function updateActiveNavLink() {
-    const sections = document.querySelectorAll('section[id]');
-    const navLinks = document.querySelectorAll('.nav-link');
-    
     let current = '';
+    const scrollY = window.pageYOffset;
     sections.forEach(section => {
-        const sectionTop = section.offsetTop;
-        const sectionHeight = section.clientHeight;
-        if (window.pageYOffset >= sectionTop - 200) {
+        if (scrollY >= section.offsetTop - 200) {
             current = section.getAttribute('id');
         }
     });
-    
     navLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href').slice(1) === current) {
-            link.classList.add('active');
-        }
+        link.classList.toggle('active', link.getAttribute('href').slice(1) === current);
     });
 }
+window.addEventListener('scroll', updateActiveNavLink, { passive: true });
+updateActiveNavLink();
 
-window.addEventListener('scroll', updateActiveNavLink);
+// ---- Counter animation for stats ----
+function animateCounter(el) {
+    const original = el.dataset.original || el.textContent.trim();
+    const match = original.match(/^(\d+)(.*)$/);
+    if (!match) {
+        // Non-numeric (e.g. "Expert") — just keep original text
+        el.textContent = original;
+        return;
+    }
+    const target = parseInt(match[1], 10);
+    const suffix = match[2];
+    const duration = 1800;
+    const startTime = performance.now();
 
-// Add smooth animation on page load
-window.addEventListener('load', function() {
-    const wireBoxes = document.querySelectorAll('.wire-box');
-    wireBoxes.forEach((box, index) => {
-        box.style.opacity = '0';
-        box.style.animation = `fadeInUp 0.6s ease-out ${index * 0.1}s forwards`;
-    });
-});
-
-// Add CSS animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
+    function tick(now) {
+        const progress = Math.min((now - startTime) / duration, 1);
+        const eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+        const current = Math.floor(eased * target);
+        el.textContent = current + suffix;
+        if (progress < 1) {
+            requestAnimationFrame(tick);
+        } else {
+            el.textContent = target + suffix;
         }
     }
-    
-    .nav-link.active {
-        border-color: #2a2a2a;
-        background-color: white;
-        color: #1a1a1a;
-    }
-`;
-document.head.appendChild(style);
-
-// Mobile menu toggle (if needed in future)
-function setupMobileMenu() {
-    const header = document.querySelector('.header');
-    const nav = document.querySelector('.nav');
-    
-    // You can add mobile menu functionality here
-    // For now, the layout is responsive with CSS only
+    requestAnimationFrame(tick);
 }
 
-setupMobileMenu();
-
-// Intersection Observer for lazy animations
-const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -100px 0px'
-};
-
-const observer = new IntersectionObserver(function(entries) {
+const counterObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
         if (entry.isIntersecting) {
-            entry.target.style.opacity = '1';
-            observer.unobserve(entry.target);
+            animateCounter(entry.target);
+            counterObserver.unobserve(entry.target);
         }
     });
-}, observerOptions);
+}, { threshold: 0.4 });
 
-// Observe all wire boxes for fade-in animation
-document.querySelectorAll('.wire-box').forEach(box => {
-    box.style.opacity = '0.8';
-    observer.observe(box);
+document.querySelectorAll('.stat-value').forEach(el => {
+    const original = el.textContent.trim();
+    el.dataset.original = original;
+    if (/^\d+/.test(original)) {
+        el.textContent = '0' + original.replace(/^\d+/, '');
+    }
+    counterObserver.observe(el);
 });
 
-// Smooth scroll restoration
+// ---- Animated progress bars ----
+const progressBars = document.querySelectorAll('.progress-fill');
+progressBars.forEach(bar => {
+    bar.dataset.targetWidth = bar.style.width || '0%';
+    bar.style.width = '0%';
+});
+
+const progressObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const bar = entry.target;
+            // tiny delay so transition catches
+            requestAnimationFrame(() => {
+                bar.style.width = bar.dataset.targetWidth;
+            });
+            progressObserver.unobserve(bar);
+        }
+    });
+}, { threshold: 0.3 });
+
+progressBars.forEach(bar => progressObserver.observe(bar));
+
+// ---- Reveal-on-scroll for wire boxes (stagger within each section) ----
+document.querySelectorAll('.blueprint-section').forEach(section => {
+    const boxes = section.querySelectorAll('.wire-box');
+    boxes.forEach((box, i) => {
+        box.style.setProperty('--reveal-delay', `${i * 90}ms`);
+    });
+});
+
+const revealObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed');
+            revealObserver.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.12, rootMargin: '0px 0px -60px 0px' });
+
+document.querySelectorAll('.wire-box').forEach(box => revealObserver.observe(box));
+
+// ---- Section label reveal ----
+const labelObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            entry.target.classList.add('is-revealed');
+            labelObserver.unobserve(entry.target);
+        }
+    });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.section-label').forEach(el => labelObserver.observe(el));
+
+// ---- Manual scroll restoration ----
 if ('scrollRestoration' in window.history) {
     window.history.scrollRestoration = 'manual';
 }
-
-// Add keyboard navigation support
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        // Close any modals if needed
-    }
-});
-
-// Log page load (optional)
-console.log('Portfolio loaded successfully!');

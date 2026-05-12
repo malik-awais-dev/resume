@@ -1148,7 +1148,7 @@ h2.section-title {
     .skill-bar {
         grid-template-columns: 1fr;
         gap: 6px;
-        margin-bottom: 18px;
+        margin-bottom: 10px;
     }
 
     .skill-percent {
